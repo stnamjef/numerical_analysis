@@ -1,98 +1,112 @@
-//// Author: DY Suh
-//// Date : June 23, 2020
-////
-////  Gradient descend for line fitting
-////  input : data1.txt     random data(almost linear) --> not working
-////  input : 4 samples of the blank constructor --> working
-////
-////  Optimize for (a, b) of y = ax + b
-////
-//#include <iostream> // for cout
-//#include <iomanip> // for setw()
-//using namespace std;
-//#include "GDlinearFn.h"
-//
-//float EE(float x0, float y0, float x1, float y1)
-//{
-//	return sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
-//}
-//
-//int main() {
-//	linearFn ab;
-//
-//	cout << "distance btw y = x and (1, 3): ";
-//	cout << ab.distance(1, 1, 1, 3) << endl;
-//
-//	cout << "sum of distances btw y = x and ";
-//	cout << "{(0.1, 1.1), (-0.1, 0.9), (1.1, 2.1), (0.9, 1.9)}: ";
-//	cout << ab.LossFn(1, 1) << endl;
-//
-//	float psi = 0.01, eta = 0.0000001; // for 4 sample (blank constructor)
-//	float da = 0.01, db = 0.01;
-//	float a0 = -2, b0 = 2;
-//	float a1 = 2.1, b1 = -0.8;  // answer (a, b) = (1, 1)   blank constructor
-//	int iteration = 0;
-//
-//	while (EE(a0, b0, a1, b1) > eta && iteration < 1000) {
-//		a0 = a1;
-//		b0 = b1;
-//		a1 -= psi * ab.dfabda(a0, b0, da);
-//		b1 -= psi * ab.dfabdb(a0, b0, db);
-//		iteration++;
-//	}
-//	cout << iteration << "-th  E = " << EE(a0, b0, a1, b1) << endl;
-//	cout << "a1 = " << a1 << ", b1 = " << b1 << endl;
-//
-//	return 0;
-//}
-//
-//
-//
-//
-////float gaussian(float x, float y, float mux, float muy, float sigx, float sigy, float peak)
-////{
-////	return (peak * exp(-pow((x - mux) / sigx, 2.0) - pow((y - muy) / sigy, 2.0)));
-////}
-////
-////float fxy(float x, float y)
-////{
-////	return (gaussian(x, y, 1., 1., 1., 2., 4) + gaussian(x, y, -1., -1., 1., 1., 2));
-////}
-//
-////#include <iostream>
-////#include <cmath>
-////using namespace std;
-////
-////float PI = 3.141592;
-////
-////float fxy(float x, float y) { return sin(2 * PI * x) * sin(4 * PI * y); }
-////float dfxydx(float x, float dx, float y) { return (fxy(x + dx, y) - fxy(x, y)) / dx; }
-////float dfxydy(float x, float y, float dy) { return (fxy(x, y + dy) - fxy(x, y)) / dy; }
-////float EE(float x0, float y0, float x1, float y1) { return sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1)); }
-////
-////
-////int main()
-////{
-////	// sprint1
-////	for (float x = 0.25; x <= 0.75; x += 0.5) {
-////		for (float y = 0.125; y <= 0.875; y += 0.25) {
-////			cout << fxy(x, y) << endl;
-////		}
-////	}
-////
-////	float psi = 0.001, eta = 0.0005, dx = 0.01, dy = 0.01;
-////	float x0 = 0.8, y0 = 0.8, x1 = 0.3, y1 = 0.3;
-////
-////	int iter = 0;
-////	while (EE(x0, y0, x1, y1) > eta && iter < 100) {
-////		x0 = x1;
-////		y0 = y1;
-////		x1 = x1 - psi * dfxydx(x0, dx, y0);
-////		y1 = y1 - psi * dfxydy(x0, y0, dy);
-////		iter++;
-////	}
-////
-////	cout << iter << "-th " << x1 << ' ' << y1 << endl;
-////
-////	return 0;
-////}
+#include <iostream>
+#include <fstream>
+#include <functional>
+#include <random>
+#include <cmath>
+using namespace std;
+
+double fx(double a, double x, double b) { return a * x + b; }
+
+double square_dist(double a, double b, double x, double y)
+{ 
+	// dist btw (x_i, y_i) and ax - y + b = 0
+	// dist = |ax_i - y_i| / sqrt(a^2 + 1)
+	return (a * x - y) * (a * x - y) / (a * a + 1);
+}
+
+double SSE(double a, double b, double* x, double* y, int n)
+{
+	double sse = 0;
+	for (int i = 0; i < n; i++) {
+		sse += square_dist(a, b, x[i], y[i]);
+	}
+	return sse;
+}
+
+double EE(double x0, double y0, double x1, double y1)
+{
+	return sqrt((x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1));
+}
+
+void randomNormal(double* x, int n, double mu, double var)
+{
+	default_random_engine e(444);
+	normal_distribution<double> dist(0, var);
+	std::for_each(x, x + n, [&](double& elem) { elem += dist(e); });
+}
+
+double dLossda(double a, double da, double b, double* x, double* y, int n)
+{
+	return (SSE(a + da, b, x, y, n) - SSE(a, b, x, y, n)) / da;
+}
+
+double dLossdb(double a, double b, double db, double* x, double* y, int n)
+{
+	return (SSE(a, b + db, x, y, n) - SSE(a, b, x, y, n)) / db;
+}
+
+int main()
+{
+	int n = 100;
+	double* X = new double[n];
+	double* Y = new double[n];
+
+	// generate evenly spaced x coordinates ranged from 0 to 30
+	double x = 0;
+	double delta = 30. / (double)n;
+	for (int i = 0; i < n; i++) {
+		X[i] = x;
+		x += delta;
+	}
+
+	// calculate y coordinates y =  2 * x + 1
+	for (int i = 0; i < n; i++) {
+		Y[i] = fx(2, X[i], 1);
+	}
+
+	// add random noise to the y coordinates
+	randomNormal(Y, n, 0, 10);
+
+	// write the x, y coordinates as a csv file
+	ofstream out("data_original.csv");
+	
+	for (int i = 0; i < n; i++) {
+		out << X[i] << ',' << Y[i] << endl;
+	}
+
+	out.close();
+
+	// optimize the loss function
+	// target values are a = 2, b = 1
+
+	double psi = 0.0001, eta = 0.00001, da = 0.001, db = 0.001;
+	double a0 = 0, b0 = 0, a1 = 0.2, b1 = 0.2;
+
+	int iter = 0;
+	while (EE(a0, b0, a1, b1) > eta && iter < 1000) {
+		a0 = a1;
+		b0 = b1;
+		a1 = a1 - psi * dLossda(a0, da, b0, X, Y, n);
+		b1 = b1 - psi * dLossdb(a0, b0, db, X, Y, n);
+
+		cout << "Iter: " << iter + 1 << ", Error: " << EE(a0, b0, a1, b1) << endl;
+
+		iter++;
+	}
+
+	cout << "Final output a1: " << a1 << ", b1: " << b1 << endl;
+
+	// estimate y_hat using the function derived above
+	out.open("data_estimated.csv");
+
+	for (int i = 0; i < n; i++) {
+		out << X[i] << ',' << fx(a1, X[i], b1) << endl;
+	}
+
+	out.close();
+
+	delete[] X;
+	delete[] Y;
+
+	return 0;
+}
