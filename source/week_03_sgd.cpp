@@ -11,7 +11,7 @@ double square_dist(double a, double b, double x, double y)
 { 
 	// dist btw (x_i, y_i) and ax - y + b = 0
 	// dist = |ax_i - y_i| / sqrt(a^2 + 1)
-	return (a * x - y) * (a * x - y) / (a * a + 1);
+	return (a * x - y + b) * (a * x - y + b) / (a * a + 1);
 }
 
 double SSE(double a, double b, double* x, double* y, int n)
